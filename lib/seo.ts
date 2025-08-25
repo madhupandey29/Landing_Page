@@ -1,4 +1,5 @@
-import { getApiUrl } from './env'
+// src/lib/seo.ts
+import { getApiUrl, getAuthHeaders } from "./env";
 
 export interface SeoData {
   openGraph: {
@@ -41,7 +42,7 @@ export interface SeoData {
   formatDetection: string;
   googleSiteVerification: string;
   hreflang: string;
-    keywords: string;
+  keywords: string;
   locationCode: string;
   mobileWebAppCapable: string;
   msValidate: string;
@@ -49,7 +50,7 @@ export interface SeoData {
   ogLocale: string;
   ogSiteName: string;
   ogTitle: string;
-  ogType: string;
+  ogType: string;           // ⬅️ added: you referenced this in metadata
   ogUrl: string;
   productIdentifier: string;
   productdescription: string;
@@ -97,149 +98,147 @@ interface ProductApiResponse {
   data: ProductData[];
 }
 
+/** Fetch SEO entries (list) then pick by slug.
+ *  Calls: http://localhost:7000/landing/seo  */
 export async function fetchSeoData(slug: string): Promise<SeoData | null> {
-  console.log(`🔍 Fetching SEO data for slug: ${slug}`)
-  
+  console.log(`🔍 Fetching SEO data for slug: ${slug}`);
+
   try {
-    const apiUrl = getApiUrl('api/seo')
-    console.log(`📡 Making API request to: ${apiUrl}`)
-    
+    const apiUrl = getApiUrl("/seo"); // ✅ base already has /landing
+    console.log(`📡 Making API request to: ${apiUrl}`);
+
     const response = await fetch(apiUrl, {
-      method: 'GET',
+      method: "GET",
       headers: {
-        'Content-Type': 'application/json',
+        ...getAuthHeaders(),         // ✅ send required auth headers
+        "Content-Type": "application/json",
       },
-      // Add timeout for better error handling
-      signal: AbortSignal.timeout(10000) // 10 second timeout
-    })
-    
+      signal: AbortSignal.timeout(10000),
+      cache: "no-store",
+    });
+
     if (!response.ok) {
-      console.error(`❌ API request failed with status: ${response.status}`)
-      throw new Error(`Failed to fetch SEO data: ${response.status} ${response.statusText}`)
+      console.error(`❌ API request failed with status: ${response.status}`);
+      throw new Error(`Failed to fetch SEO data: ${response.status} ${response.statusText}`);
     }
-    
-    const apiResponse: ApiResponse = await response.json()
-    console.log(`✅ API response received:`, apiResponse)
-    
+
+    const apiResponse: ApiResponse = await response.json();
+    console.log(`✅ API response received:`, apiResponse);
+
     if (!apiResponse.success) {
-      console.error(`❌ API returned success: false`)
-      return null
+      console.error(`❌ API returned success: false`);
+      return null;
     }
-    
+
     if (!apiResponse.data || apiResponse.data.length === 0) {
-      console.log(`⚠️ No SEO data found in API response`)
-      return null
+      console.log(`⚠️ No SEO data found in API response`);
+      return null;
     }
-    
-    console.log(`📊 Found ${apiResponse.data.length} SEO records`)
-    
-    // Find the matching slug in the data array
-    const matchingSeoData = apiResponse.data.find(item => item.slug === slug)
-    
+
+    console.log(`📊 Found ${apiResponse.data.length} SEO records`);
+
+    // Find matching slug
+    const matchingSeoData = apiResponse.data.find((item) => item.slug === slug);
+
     if (!matchingSeoData) {
-      console.log(`❌ No SEO data found for slug: ${slug}`)
-      console.log(`📋 Available slugs:`, apiResponse.data.map(item => item.slug))
-      return null
+      console.log(`❌ No SEO data found for slug: ${slug}`);
+      console.log(`📋 Available slugs:`, apiResponse.data.map((item) => item.slug));
+      return null;
     }
-    
-    console.log(`✅ Found matching SEO data for slug: ${slug}`)
-    return matchingSeoData
-    
-  } catch (error) {
-    console.error(`❌ Error fetching SEO data for slug ${slug}:`, error)
-    
-    // If it's a network error, provide more helpful logging
-    if (error instanceof TypeError && error.message.includes('fetch')) {
-      console.error(`🌐 Network error - Make sure your API server is running at ${getApiUrl('api/seo')}`)
+
+    console.log(`✅ Found matching SEO data for slug: ${slug}`);
+    return matchingSeoData;
+  } catch (error: any) {
+    console.error(`❌ Error fetching SEO data for slug ${slug}:`, error);
+
+    if (error instanceof TypeError && error.message?.includes("fetch")) {
+      console.error(`🌐 Network error - Make sure your API server is running at ${getApiUrl("/seo")}`);
     }
-    
-    return null
+
+    return null;
   }
 }
 
+/** Fetch products list.
+ *  Calls: http://localhost:7000/landing/product  */
 export async function fetchProductData(): Promise<ProductData[]> {
-  console.log(`🔍 Fetching product data`)
-  
+  console.log(`🔍 Fetching product data`);
+
   try {
-    const apiUrl = getApiUrl('api/product')
-    console.log(`📡 Making API request to: ${apiUrl}`)
-    
+    const apiUrl = getApiUrl("/product"); // ✅ base already has /landing
+    console.log(`📡 Making API request to: ${apiUrl}`);
+
     const response = await fetch(apiUrl, {
-      method: 'GET',
+      method: "GET",
       headers: {
-        'Content-Type': 'application/json',
+        ...getAuthHeaders(),         // ✅ send required auth headers
+        "Content-Type": "application/json",
       },
-      signal: AbortSignal.timeout(10000) // 10 second timeout
-    })
-    
+      signal: AbortSignal.timeout(10000),
+      cache: "no-store",
+    });
+
     if (!response.ok) {
-      console.error(`❌ API request failed with status: ${response.status}`)
-      throw new Error(`Failed to fetch product data: ${response.status} ${response.statusText}`)
+      console.error(`❌ API request failed with status: ${response.status}`);
+      throw new Error(`Failed to fetch product data: ${response.status} ${response.statusText}`);
     }
-    
-    const apiResponse: ProductApiResponse = await response.json()
-    console.log(`✅ Product API response received:`, apiResponse)
-    
+
+    const apiResponse: ProductApiResponse = await response.json();
+    console.log(`✅ Product API response received:`, apiResponse);
+
     if (!apiResponse.success) {
-      console.error(`❌ Product API returned success: false`)
-      return []
+      console.error(`❌ Product API returned success: false`);
+      return [];
     }
-    
+
     if (!apiResponse.data || apiResponse.data.length === 0) {
-      console.log(`⚠️ No product data found in API response`)
-      return []
+      console.log(`⚠️ No product data found in API response`);
+      return [];
     }
-    
-    console.log(`📊 Found ${apiResponse.data.length} product records`)
-    return apiResponse.data
-    
-  } catch (error) {
-    console.error(`❌ Error fetching product data:`, error)
-    
-    if (error instanceof TypeError && error.message.includes('fetch')) {
-      console.error(`🌐 Network error - Make sure your API server is running at ${getApiUrl('api/product')}`)
+
+    console.log(`📊 Found ${apiResponse.data.length} product records`);
+    return apiResponse.data;
+  } catch (error: any) {
+    console.error(`❌ Error fetching product data:`, error);
+
+    if (error instanceof TypeError && error.message?.includes("fetch")) {
+      console.error(`🌐 Network error - Make sure your API server is running at ${getApiUrl("/product")}`);
     }
-    
-    return []
+
+    return [];
   }
 }
 
 export async function getProductNameForSlug(slug: string): Promise<string | null> {
   try {
-    console.log(`🔍 Getting product name for slug: ${slug}`)
-    
-    // Fetch both SEO and product data
-    const [seoData, products] = await Promise.all([
-      fetchSeoData(slug),
-      fetchProductData()
-    ])
-    
+    console.log(`🔍 Getting product name for slug: ${slug}`);
+
+    const [seoData, products] = await Promise.all([fetchSeoData(slug), fetchProductData()]);
+
     if (!seoData) {
-      console.log(`❌ No SEO data found for slug: ${slug}`)
-      return null
+      console.log(`❌ No SEO data found for slug: ${slug}`);
+      return null;
     }
-    
+
     if (!products.length) {
-      console.log(`❌ No products found in API response`)
-      return null
+      console.log(`❌ No products found in API response`);
+      return null;
     }
-    
-    console.log(`📊 Found ${products.length} products, looking for product ID: ${seoData.product}`)
-    
-    // Find the product that matches the SEO product ID
-    const matchingProduct = products.find(product => product._id === seoData.product)
-    
+
+    console.log(`📊 Found ${products.length} products, looking for product ID: ${seoData.product}`);
+
+    const matchingProduct = products.find((product) => product._id === seoData.product);
+
     if (!matchingProduct) {
-      console.log(`❌ No product found matching SEO product ID: ${seoData.product}`)
-      console.log(`📋 Available product IDs:`, products.map(p => p._id))
-      return null
+      console.log(`❌ No product found matching SEO product ID: ${seoData.product}`);
+      console.log(`📋 Available product IDs:`, products.map((p) => p._id));
+      return null;
     }
-    
-    console.log(`✅ Found matching product: ${matchingProduct.name}`)
-    return matchingProduct.name
-    
+
+    console.log(`✅ Found matching product: ${matchingProduct.name}`);
+    return matchingProduct.name;
   } catch (error) {
-    console.error(`❌ Error getting product name for slug ${slug}:`, error)
-    return null
+    console.error(`❌ Error getting product name for slug ${slug}:`, error);
+    return null;
   }
 }

@@ -1,10 +1,18 @@
-import type React from "react"
-import type { Metadata } from "next"
-import ClientLayout from "./ClientLayout"
-import "./globals.css"
+// app/layout.tsx
+import type React from "react";
+import type { Metadata, Viewport } from "next";
+import ClientLayout from "./ClientLayout";
+import "./globals.css";
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#ffffff",
+};
 
 export const metadata: Metadata = {
-  title: "Premium B2B Fabric Supplier | Global Textile Manufacturing Solutions - FabricPro",
+  title:
+    "Premium B2B Fabric Supplier | Global Textile Manufacturing Solutions - FabricPro",
   description:
     "Leading B2B fabric supplier for global garment manufacturers, clothing retailers, and fabric importers. Premium quality textiles, competitive pricing, worldwide shipping.",
   keywords:
@@ -20,36 +28,36 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Premium B2B Fabric Supplier | Global Textile Manufacturing Solutions",
-    description: "Leading B2B fabric supplier for global garment manufacturers, clothing retailers, and fabric importers.",
+    title:
+      "Premium B2B Fabric Supplier | Global Textile Manufacturing Solutions",
+    description:
+      "Leading B2B fabric supplier for global garment manufacturers, clothing retailers, and fabric importers.",
   },
   robots: {
     index: true,
     follow: true,
   },
-  viewport: "width=device-width, initial-scale=1",
-  themeColor: "#ffffff",
   verification: {
     google: "your-google-verification-code",
   },
   other: {
-    'format-detection': 'telephone=no',
-    'apple-mobile-web-app-capable': 'yes',
-    'apple-mobile-web-app-status-bar-style': 'default',
-    'x-ua-compatible': 'IE=edge',
-    charset: 'utf-8',
-    'content-language': 'en',
+    "format-detection": "telephone=no",
+    "apple-mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-status-bar-style": "default",
+    "x-ua-compatible": "IE=edge",
+    charset: "utf-8",
+    "content-language": "en",
   },
   alternates: {
     canonical: "https://yourdomain.com",
   },
-  generator: 'v0.dev'
-}
+  generator: "v0.dev",
+};
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
     <html lang="en" className="scroll-smooth">
@@ -57,5 +65,5 @@ export default function RootLayout({
         <ClientLayout>{children}</ClientLayout>
       </body>
     </html>
-  )
+  );
 }

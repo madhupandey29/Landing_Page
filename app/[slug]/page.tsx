@@ -1,41 +1,58 @@
-import { Metadata } from 'next'
-import Image from "next/image"
-import { WhatsAppButton } from "@/components/whatsapp-button"
-import { Chatbot } from "@/components/chatbot"
-import { ProductCategories } from "@/components/product-categories"
-import { FAQ } from "@/components/faq"
-import { ContactForm } from "@/components/contact-form"
-import { fetchSeoData } from '@/lib/seo'
+// app/[slug]/page.tsx
+import type { Metadata } from "next";
+import Image from "next/image";
+import { WhatsAppButton } from "@/components/whatsapp-button";
+import { Chatbot } from "@/components/chatbot";
+import { ProductCategories } from "@/components/product-categories";
+import { FAQ } from "@/components/faq";
+import { ContactForm } from "@/components/contact-form";
+import { fetchSeoData } from "@/lib/seo";
 
+// In Next.js 15 some dynamic contexts provide `params` as a Promise
 type Props = {
-  params: {
-    slug: string
-  }
-}
+  params: Promise<{ slug: string }>;
+};
 
 // Valid OpenGraph types
-const validOgTypes = ['website', 'article', 'book', 'profile', 'music.song', 'music.album', 'music.playlist', 'music.radio_station', 'video.movie', 'video.episode', 'video.tv_show', 'video.other'] as const
+const validOgTypes = [
+  "website",
+  "article",
+  "book",
+  "profile",
+  "music.song",
+  "music.album",
+  "music.playlist",
+  "music.radio_station",
+  "video.movie",
+  "video.episode",
+  "video.tv_show",
+  "video.other",
+] as const;
 
 // Valid Twitter card types
-const validTwitterCards = ['summary', 'summary_large_image', 'player', 'app'] as const
+const validTwitterCards = ["summary", "summary_large_image", "player", "app"] as const;
+
+// Treat anything with a dot as a static asset (favicon.ico, icon-192x192.png, robots.txt, etc.)
+const isAssetSlug = (slug?: string) => !!slug && slug.includes(".");
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  // Guard: skip static asset slugs (e.g., icon.png, robots.txt, etc.)
-  if (params.slug && params.slug.includes('.')) {
-    return {};
-  }
+  const { slug } = await params; // ✅ await the params (Next 15 fix)
+  if (isAssetSlug(slug)) return {};
+
   try {
-    const seoData = await fetchSeoData(params.slug);
-    if (seoData && seoData.slug === params.slug) {
-      // Sanitize ogType
-      const validOgTypes = [
-        'website', 'article', 'book', 'profile',
-        'music.song', 'music.album', 'music.playlist', 'music.radio_station',
-        'video.movie', 'video.episode', 'video.tv_show', 'video.other'
-      ] as const;
-      const ogType = validOgTypes.includes(seoData.ogType as any)
+    const seoData = await fetchSeoData(slug);
+
+    if (seoData && seoData.slug === slug) {
+      const ogType = (validOgTypes as readonly string[]).includes(seoData.ogType as any)
         ? (seoData.ogType as (typeof validOgTypes)[number])
-        : 'website';
+        : "website";
+
+      const twitterCard = (validTwitterCards as readonly string[]).includes(
+        seoData.twitterCard as any
+      )
+        ? (seoData.twitterCard as (typeof validTwitterCards)[number])
+        : "summary_large_image";
+
       return {
         title: seoData.title,
         description: seoData.description,
@@ -49,10 +66,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
           locale: seoData.ogLocale,
           type: ogType,
           url: seoData.ogUrl,
-          images: seoData.openGraph.images,
-        } as any, // Type assertion to satisfy OpenGraph type
+          images: seoData.openGraph?.images,
+        } as any, // minimal assertion for images array flexibility
         twitter: {
-          card: seoData.twitterCard,
+          card: twitterCard,
           title: seoData.twitterTitle,
           description: seoData.twitterDescription,
         },
@@ -60,60 +77,70 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
           google: seoData.googleSiteVerification,
         },
         other: {
-          'format-detection': seoData.formatDetection,
-          'apple-mobile-web-app-capable': seoData.mobileWebAppCapable,
-          'apple-mobile-web-app-status-bar-style': seoData.appleStatusBarStyle,
-          'x-ua-compatible': seoData.xUaCompatible,
+          "format-detection": seoData.formatDetection,
+          "apple-mobile-web-app-capable": seoData.mobileWebAppCapable,
+          "apple-mobile-web-app-status-bar-style": seoData.appleStatusBarStyle,
+          "x-ua-compatible": seoData.xUaCompatible,
           charset: seoData.charset,
           canonical: seoData.canonical_url,
-          'content-language': seoData.contentLanguage,
-          'hreflang': seoData.hreflang,
-          'x-default': seoData.x_default,
+          "content-language": seoData.contentLanguage,
+          hreflang: seoData.hreflang,
+          "x-default": seoData.x_default,
         },
         alternates: {
           canonical: seoData.canonical_url,
         },
       };
     }
+
     // Static fallback
     return {
-      title: "Premium B2B Fabric Supplier | Global Textile Manufacturing Solutions - FabricPro",
-      description: "Leading B2B fabric supplier for global garment manufacturers, clothing retailers, and fabric importers. Premium quality textiles, competitive pricing, worldwide shipping.",
-      keywords: "B2B fabric supplier, textile manufacturer, bulk fabric orders, garment industry, clothing retailers, fabric importers, wholesale textiles, global fabric trade",
+      title:
+        "Premium B2B Fabric Supplier | Global Textile Manufacturing Solutions - FabricPro",
+      description:
+        "Leading B2B fabric supplier for global garment manufacturers, clothing retailers, and fabric importers. Premium quality textiles, competitive pricing, worldwide shipping.",
+      keywords:
+        "B2B fabric supplier, textile manufacturer, bulk fabric orders, garment industry, clothing retailers, fabric importers, wholesale textiles, global fabric trade",
       authors: [{ name: "FabricPro Team" }],
       robots: "index, follow",
       openGraph: {
-        title: "Premium B2B Fabric Supplier | Global Textile Manufacturing Solutions",
-        description: "Leading B2B fabric supplier for global garment manufacturers, clothing retailers, and fabric importers.",
+        title:
+          "Premium B2B Fabric Supplier | Global Textile Manufacturing Solutions",
+        description:
+          "Leading B2B fabric supplier for global garment manufacturers, clothing retailers, and fabric importers.",
         siteName: "FabricPro",
         locale: "en_US",
         type: "website",
       },
       twitter: {
         card: "summary_large_image",
-        title: "Premium B2B Fabric Supplier | Global Textile Manufacturing Solutions",
-        description: "Leading B2B fabric supplier for global garment manufacturers, clothing retailers, and fabric importers.",
+        title:
+          "Premium B2B Fabric Supplier | Global Textile Manufacturing Solutions",
+        description:
+          "Leading B2B fabric supplier for global garment manufacturers, clothing retailers, and fabric importers.",
       },
       other: {
-        'format-detection': 'telephone=no',
-        'apple-mobile-web-app-capable': 'yes',
-        'apple-mobile-web-app-status-bar-style': 'default',
-        'x-ua-compatible': 'IE=edge',
-        charset: 'utf-8',
-        'content-language': 'en',
-        canonical: 'https://yourdomain.com',
-        'google-site-verification': 'your-google-verification-code',
+        "format-detection": "telephone=no",
+        "apple-mobile-web-app-capable": "yes",
+        "apple-mobile-web-app-status-bar-style": "default",
+        "x-ua-compatible": "IE=edge",
+        charset: "utf-8",
+        "content-language": "en",
+        canonical: "https://yourdomain.com",
+        "google-site-verification": "your-google-verification-code",
       },
     };
-  } catch (error) {
+  } catch {
     return {
-      title: "Premium B2B Fabric Supplier | Global Textile Manufacturing Solutions - FabricPro",
-      description: "Leading B2B fabric supplier for global garment manufacturers, clothing retailers, and fabric importers.",
+      title:
+        "Premium B2B Fabric Supplier | Global Textile Manufacturing Solutions - FabricPro",
+      description:
+        "Leading B2B fabric supplier for global garment manufacturers, clothing retailers, and fabric importers.",
     };
   }
 }
 
-// Structured data for better SEO
+// Structured data (example)
 const structuredData = {
   "@context": "https://schema.org",
   "@graph": [
@@ -135,7 +162,7 @@ const structuredData = {
       description: "High-quality textiles for global garment manufacturers",
       brand: {
         "@type": "Brand",
-        name: "FabricPro"
+        name: "FabricPro",
       },
       offers: {
         "@type": "AggregateOffer",
@@ -143,44 +170,48 @@ const structuredData = {
         availability: "https://schema.org/InStock",
         seller: {
           "@type": "Organization",
-          name: "FabricPro"
-        }
-      }
-    }
-  ]
-}
-
-
-
-import MobileNav from "@/components/mobile-nav";
+          name: "FabricPro",
+        },
+      },
+    },
+  ],
+};
 
 export default async function SlugPage({ params }: Props) {
+  const { slug } = await params; // ✅ await the params
+  if (isAssetSlug(slug)) return null;
+
+  // Lazy import product fetcher to keep top-level import light
+  const [{ fetchProductData }] = await Promise.all([import("@/lib/seo")]);
+
   const [seoData, products] = await Promise.all([
-    fetchSeoData(params.slug),
-    (await import('@/lib/seo')).fetchProductData()
+    fetchSeoData(slug),
+    fetchProductData(),
   ]);
 
-  // Find the product image if SEO and product match
+  // Determine hero assets from product link (via SEO.product id)
   let heroImage = "/placeholder.svg?height=600&width=800";
   let heroAlt = "Premium fabric warehouse with organized textile rolls";
-  if (seoData && products && Array.isArray(products)) {
-    const matchingProduct = products.find(p => p._id === seoData.product);
-    if (matchingProduct && matchingProduct.img) {
+  if (seoData && Array.isArray(products)) {
+    const matchingProduct = products.find((p) => p._id === seoData.product);
+    if (matchingProduct?.img) {
       heroImage = matchingProduct.img;
       heroAlt = matchingProduct.name || heroAlt;
     }
   }
 
-
   return (
     <>
       {/* Structured Data */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
-
- 
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
 
       <main className="min-h-screen bg-white">
-        {/* Hero Section - Responsive for mobile */}
+        {/* ───────────────────────────────────────────────────────────
+            HERO
+        ─────────────────────────────────────────────────────────── */}
         <section className="hero relative bg-white text-slate-900 overflow-hidden pt-4 pb-8 sm:pt-8">
           <div className="relative max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
             <div className="flex flex-col lg:grid lg:grid-cols-2 gap-8 items-center">
@@ -188,9 +219,11 @@ export default async function SlugPage({ params }: Props) {
               <div className="space-y-8 w-full mt-6 lg:mt-0">
                 <div className="space-y-4">
                   <h1 className="text-3xl sm:text-4xl lg:text-6xl font-bold leading-tight tracking-tight">
-                    {seoData && products && Array.isArray(products) ? (() => {
-                      const matchingProduct = products.find(p => p._id === seoData.product);
-                      if (matchingProduct && matchingProduct.name) {
+                    {seoData && Array.isArray(products) ? (() => {
+                      const matchingProduct = products.find(
+                        (p) => p._id === seoData.product
+                      );
+                      if (matchingProduct?.name) {
                         return (
                           <>
                             Premium{" "}
@@ -202,7 +235,9 @@ export default async function SlugPage({ params }: Props) {
                         );
                       }
                       return <>Premium Fabrics for Global Manufacturers</>;
-                    })() : <>Premium Fabrics for Global Manufacturers</>}
+                    })() : (
+                      <>Premium Fabrics for Global Manufacturers</>
+                    )}
                   </h1>
 
                   <p className="text-base sm:text-xl text-slate-600 leading-relaxed max-w-2xl">
@@ -216,7 +251,9 @@ export default async function SlugPage({ params }: Props) {
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
                           <span className="text-slate-500">SKU:</span>
-                          <span className="text-slate-900 ml-2">{seoData.sku}</span>
+                          <span className="text-slate-900 ml-2">
+                            {seoData.sku}
+                          </span>
                         </div>
                         <div>
                           <span className="text-slate-500">Price:</span>
@@ -298,34 +335,37 @@ export default async function SlugPage({ params }: Props) {
           </div>
         </section>
 
-
-
-
-        {/* Company Overview */}
+        {/* ───────────────────────────────────────────────────────────
+            COMPANY OVERVIEW
+        ─────────────────────────────────────────────────────────── */}
         <section className="py-20 bg-slate-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16">
               <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-6">
                 Leading B2B Fabric Supplier Worldwide
               </h2>
-              <p className="text-slate-600 mb-8">ISO 9001 Certified • 500+ Global Partners • Ships to 50+ Countries</p>
+              <p className="text-slate-600 mb-8">
+                ISO 9001 Certified • 500+ Global Partners • Ships to 50+ Countries
+              </p>
               <div className="w-24 h-1 bg-gradient-to-r from-blue-600 to-emerald-600 mx-auto mb-8" />
             </div>
 
             <div className="grid lg:grid-cols-2 gap-16 items-center">
               <div className="space-y-6">
                 <p className="text-lg text-slate-700 leading-relaxed">
-                  As a premier B2B fabric supplier, we specialize in providing high-quality textiles to global garment
-                  manufacturers, clothing retailers, and fabric trading companies. Our extensive network spans across
-                  major textile hubs worldwide, ensuring consistent supply chains and competitive pricing for bulk
-                  fabric orders.
+                  As a premier B2B fabric supplier, we specialize in providing
+                  high-quality textiles to global garment manufacturers, clothing
+                  retailers, and fabric trading companies. Our extensive network spans
+                  across major textile hubs worldwide, ensuring consistent supply
+                  chains and competitive pricing for bulk fabric orders.
                 </p>
 
                 <p className="text-lg text-slate-700 leading-relaxed">
-                  Our commitment to excellence extends beyond product quality to encompass reliable logistics, flexible
-                  payment terms, and comprehensive customer support. Whether you're sourcing fabrics for fast fashion,
-                  luxury apparel, or industrial textiles, our experienced team works closely with fabric importers and
-                  manufacturers to deliver customized solutions.
+                  Our commitment to excellence extends beyond product quality to
+                  encompass reliable logistics, flexible payment terms, and
+                  comprehensive customer support. Whether you're sourcing fabrics for
+                  fast fashion, luxury apparel, or industrial textiles, our team
+                  delivers customized solutions.
                 </p>
 
                 <div className="grid sm:grid-cols-2 gap-6 mt-8">
@@ -355,12 +395,18 @@ export default async function SlugPage({ params }: Props) {
           </div>
         </section>
 
-        {/* Trusted By Section */}
+        {/* ───────────────────────────────────────────────────────────
+            TRUSTED BY
+        ─────────────────────────────────────────────────────────── */}
         <section className="py-16 bg-white border-b border-slate-200">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
-              <h2 className="text-2xl font-bold text-slate-900 mb-2">Trusted by Leading Brands Worldwide</h2>
-              <p className="text-slate-600">Ships to 50+ countries • MOQ 100 meters • 24-hour response time</p>
+              <h2 className="text-2xl font-bold text-slate-900 mb-2">
+                Trusted by Leading Brands Worldwide
+              </h2>
+              <p className="text-slate-600">
+                Ships to 50+ countries • MOQ 100 meters • 24-hour response time
+              </p>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8 items-center opacity-60">
@@ -382,8 +428,12 @@ export default async function SlugPage({ params }: Props) {
             <div className="mt-16 bg-gradient-to-r from-blue-50 to-emerald-50 p-8 rounded-2xl border border-blue-100">
               <div className="max-w-4xl mx-auto">
                 <div className="text-center mb-6">
-                  <h3 className="text-xl font-bold text-slate-900 mb-2">Success Story</h3>
-                  <p className="text-slate-600">How Acme Apparel reduced lead times by 30% with our fabrics</p>
+                  <h3 className="text-xl font-bold text-slate-900 mb-2">
+                    Success Story
+                  </h3>
+                  <p className="text-slate-600">
+                    How Acme Apparel reduced lead times by 30% with our fabrics
+                  </p>
                 </div>
 
                 <div className="grid md:grid-cols-3 gap-6 text-center">
@@ -402,7 +452,10 @@ export default async function SlugPage({ params }: Props) {
                 </div>
 
                 <div className="text-center mt-6">
-                  <a href="#case-study" className="text-blue-600 hover:text-blue-700 font-medium">
+                  <a
+                    href="#case-study"
+                    className="text-blue-600 hover:text-blue-700 font-medium"
+                  >
                     Read Full Case Study →
                   </a>
                 </div>
@@ -411,19 +464,107 @@ export default async function SlugPage({ params }: Props) {
           </div>
         </section>
 
-        {/* Product Categories */}
+        {/* ───────────────────────────────────────────────────────────
+            CATALOG (anchor used by the hero button)
+        ─────────────────────────────────────────────────────────── */}
+        <section id="catalog" className="py-16 bg-slate-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-10">
+              <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-4">
+                Explore Our Fabric Catalog
+              </h2>
+              <p className="text-slate-600">
+                Denim, Twill, Poplin, Jersey, Corduroy and more—curated for B2B buyers.
+              </p>
+            </div>
+
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {["Denim", "Twill", "Poplin", "Jersey", "Corduroy", "Canvas"].map(
+                (name, idx) => (
+                  <div
+                    key={idx}
+                    className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition"
+                  >
+                    <div className="h-40 relative mb-4 rounded-lg overflow-hidden bg-slate-100">
+                      <Image
+                        src={`/placeholder.svg?height=200&width=320&text=${encodeURIComponent(
+                          name
+                        )}`}
+                        alt={`${name} fabric`}
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 768px) 100vw, 320px"
+                      />
+                    </div>
+                    <div className="font-semibold text-slate-900">{name}</div>
+                    <div className="text-sm text-slate-600">
+                      High quality {name.toLowerCase()} for apparel.
+                    </div>
+                  </div>
+                )
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* ───────────────────────────────────────────────────────────
+            PROCESS
+        ─────────────────────────────────────────────────────────── */}
+        <section className="py-16 bg-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-12">
+              <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">
+                Simple Buying Process
+              </h2>
+              <p className="text-slate-600 mt-2">
+                From sampling to shipment—optimized for speed and quality.
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-4 gap-6">
+              {[
+                { step: "1", title: "Brief & Samples", text: "Share GSM, blend, finish and colors." },
+                { step: "2", title: "Quote & Lead Time", text: "Clear pricing & timelines upfront." },
+                { step: "3", title: "PO & Production", text: "QC checks across the production run." },
+                { step: "4", title: "Logistics & Delivery", text: "Global shipping with tracking." },
+              ].map((s) => (
+                <div
+                  key={s.step}
+                  className="bg-slate-50 border border-slate-200 rounded-xl p-6"
+                >
+                  <div className="w-10 h-10 rounded-lg bg-emerald-500 text-white flex items-center justify-center font-bold">
+                    {s.step}
+                  </div>
+                  <div className="font-semibold mt-4">{s.title}</div>
+                  <div className="text-sm text-slate-600 mt-2">{s.text}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ───────────────────────────────────────────────────────────
+            PRODUCT CATEGORIES
+        ─────────────────────────────────────────────────────────── */}
         <ProductCategories />
 
-        {/* FAQ Section */}
+        {/* ───────────────────────────────────────────────────────────
+            FAQ
+        ─────────────────────────────────────────────────────────── */}
         <FAQ />
 
-        {/* Contact Form */}
+        {/* ───────────────────────────────────────────────────────────
+            CONTACT
+        ─────────────────────────────────────────────────────────── */}
         <section id="contact" className="py-20 bg-slate-900">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16">
-              <h2 className="text-3xl sm:text-4xl font-bold text-white mb-6">Get Your Custom Quote Today</h2>
+              <h2 className="text-3xl sm:text-4xl font-bold text-white mb-6">
+                Get Your Custom Quote Today
+              </h2>
               <p className="text-xl text-slate-300 max-w-3xl mx-auto">
-                Connect with our fabric specialists for personalized pricing and bulk order solutions
+                Connect with our fabric specialists for personalized pricing and bulk order
+                solutions
               </p>
             </div>
 
@@ -437,7 +578,10 @@ export default async function SlugPage({ params }: Props) {
                   </div>
                   <div>
                     <div className="text-white font-semibold">Phone</div>
-                    <a href="tel:+919925155141" className="text-slate-300 hover:text-white transition-colors">
+                    <a
+                      href="tel:+919925155141"
+                      className="text-slate-300 hover:text-white transition-colors"
+                    >
                       +91 9925155141
                     </a>
                   </div>
@@ -464,8 +608,21 @@ export default async function SlugPage({ params }: Props) {
                   </div>
                   <div>
                     <div className="text-white font-semibold">Office</div>
-                    <div className="text-slate-300">404, Safal Prelude,Corporate Rd, Prahlad Nagar,<br /> Ahmedabad,
-                      Gujarat-380015</div>
+                    <div className="text-slate-300">
+                      404, Safal Prelude, Corporate Rd, Prahlad Nagar,
+                      <br />
+                      Ahmedabad, Gujarat-380015
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-4">
+                  <div className="w-12 h-12 bg-rose-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <span className="text-white text-xl">🕘</span>
+                  </div>
+                  <div>
+                    <div className="text-white font-semibold">Hours</div>
+                    <div className="text-slate-300">Mon–Sat: 9:30 AM – 7:00 PM IST</div>
                   </div>
                 </div>
               </div>
@@ -473,10 +630,10 @@ export default async function SlugPage({ params }: Props) {
           </div>
         </section>
 
-        {/* WhatsApp Button and Chatbot */}
+        {/* Floating actions */}
         <WhatsAppButton />
         <Chatbot />
       </main>
     </>
-  )
+  );
 }

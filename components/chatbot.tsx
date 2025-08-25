@@ -46,12 +46,12 @@ export function Chatbot() {
   // n8n Webhook Configuration
   //const N8N_WEBHOOK_URL = 'https://n8n.egport.com/webhook/92b9c54d-a413-4e49-8c05-37cfa42e83b0'
   
-  //const N8N_WEBHOOK_URL: = process.env.N8N_WEBHOOK_URL;
+  const N8N_WEBHOOK_URL = process.env.NEXT_PUBLIC_N8N_WEBHOOK_URL
   
   
   // API Key Configuration - Choose one method:
   // Method 1: Environment variable (recommended)
-  //const N8N_API_KEY =  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIwYmU1MjdhYi01NDBhLTQ4OTktOWI2MS00MWVmZGZiNDBiMmUiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzU0NjU5NDU3LCJleHAiOjE3NTcxODM0MDB9.u-yDlBG1XH383i_ov3qlI2YVcRL7Sq9PH18z-gnuxPY"
+  const N8N_API_KEY = process.env.NEXT_PUBLIC_N8N_API_KEY
   
   //const N8N_API_KEY =  process.env.N8N_API_KEY
   
@@ -61,8 +61,8 @@ export function Chatbot() {
   // Method 3: No API key (if webhook is public)
   // const N8N_API_KEY = null
 
-  const N8N_WEBHOOK_URL = process.env.NEXT_PUBLIC_N8N_WEBHOOK_URL;
-  const N8N_API_KEY = process.env.NEXT_PUBLIC_N8N_API_KEY;
+  // const N8N_WEBHOOK_URL = process.env.NEXT_PUBLIC_N8N_WEBHOOK_URL;
+  // const N8N_API_KEY = process.env.NEXT_PUBLIC_N8N_API_KEY;
 
   const quickReplies: QuickReply[] = [
     { id: '1', text: 'Get Quote', action: 'quote' },
