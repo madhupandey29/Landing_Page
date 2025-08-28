@@ -13,6 +13,20 @@ type Props = {
   params: Promise<{ slug: string }>;
 };
 
+// --- Types used locally (minimal, to avoid "any") ---
+type ProductDoc = {
+  _id: string;
+  name?: string;
+  img?: string;
+  image1?: string;
+  image2?: string;
+};
+
+type SeoDoc = {
+  product?: string | { _id?: string };
+  // ... other fields are present but not needed for the image logic
+};
+
 // Valid OpenGraph types
 const validOgTypes = [
   "website",
@@ -35,12 +49,20 @@ const validTwitterCards = ["summary", "summary_large_image", "player", "app"] as
 // Treat anything with a dot as a static asset (favicon.ico, icon-192x192.png, robots.txt, etc.)
 const isAssetSlug = (slug?: string) => !!slug && slug.includes(".");
 
+// Helper: normalize id whether seoData.product is a string or {_id}
+function getLinkedProductId(prod: SeoDoc["product"]): string {
+  if (!prod) return "";
+  if (typeof prod === "string") return prod.trim();
+  if (typeof prod === "object" && prod._id) return String(prod._id).trim();
+  return "";
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params; // ✅ await the params (Next 15 fix)
   if (isAssetSlug(slug)) return {};
 
   try {
-    const seoData = await fetchSeoData(slug);
+    const seoData: any = await fetchSeoData(slug);
 
     if (seoData && seoData.slug === slug) {
       const ogType = (validOgTypes as readonly string[]).includes(seoData.ogType as any)
@@ -126,7 +148,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         "x-ua-compatible": "IE=edge",
         charset: "utf-8",
         "content-language": "en",
-        canonical: "https://yourdomain.com",
+        /*  canonical: "https://yourdomain.com", */
         "google-site-verification": "your-google-verification-code",
       },
     };
@@ -189,16 +211,29 @@ export default async function SlugPage({ params }: Props) {
     fetchProductData(),
   ]);
 
-  // Determine hero assets from product link (via SEO.product id)
+  // --- Find the linked product once, reuse in multiple places ---
+  const linkedProductId = getLinkedProductId((seoData as SeoDoc | undefined)?.product);
+  const matchingProduct: ProductDoc | null =
+    (Array.isArray(products) ? (products as ProductDoc[]).find((p) => p._id === linkedProductId) : null) || null;
+
+  // HERO image stays as before (uses "img")
   let heroImage = "/placeholder.svg?height=600&width=800";
   let heroAlt = "Premium fabric warehouse with organized textile rolls";
-  if (seoData && Array.isArray(products)) {
-    const matchingProduct = products.find((p) => p._id === seoData.product);
-    if (matchingProduct?.img) {
-      heroImage = matchingProduct.img;
-      heroAlt = matchingProduct.name || heroAlt;
-    }
+  if (matchingProduct?.img) {
+    heroImage = matchingProduct.img;
+    heroAlt = matchingProduct.name || heroAlt;
   }
+
+  // ✅ Company Overview right panel image uses SECOND image:
+  // priority: image2 → image1 → img → placeholder
+  const overviewImage =
+    (matchingProduct?.image2?.trim() ||
+      matchingProduct?.image1?.trim() ||
+      matchingProduct?.img?.trim() ||
+      "/placeholder.svg?height=500&width=600");
+
+  const overviewAlt =
+    (matchingProduct?.name ? `${matchingProduct.name} — secondary view` : "Modern textile manufacturing facility");
 
   return (
     <>
@@ -219,23 +254,15 @@ export default async function SlugPage({ params }: Props) {
               <div className="space-y-8 w-full mt-6 lg:mt-0">
                 <div className="space-y-4">
                   <h1 className="text-3xl sm:text-4xl lg:text-6xl font-bold leading-tight tracking-tight">
-                    {seoData && Array.isArray(products) ? (() => {
-                      const matchingProduct = products.find(
-                        (p) => p._id === seoData.product
-                      );
-                      if (matchingProduct?.name) {
-                        return (
-                          <>
-                            Premium{" "}
-                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">
-                              {matchingProduct.name}
-                            </span>{" "}
-                            for Global Manufacturers
-                          </>
-                        );
-                      }
-                      return <>Premium Fabrics for Global Manufacturers</>;
-                    })() : (
+                    {matchingProduct?.name ? (
+                      <>
+                        Premium{" "}
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">
+                          {matchingProduct.name}
+                        </span>{" "}
+                        for Global Manufacturers
+                      </>
+                    ) : (
                       <>Premium Fabrics for Global Manufacturers</>
                     )}
                   </h1>
@@ -252,25 +279,25 @@ export default async function SlugPage({ params }: Props) {
                         <div>
                           <span className="text-slate-500">SKU:</span>
                           <span className="text-slate-900 ml-2">
-                            {seoData.sku}
+                            {(seoData as any).sku}
                           </span>
                         </div>
                         <div>
                           <span className="text-slate-500">Price:</span>
                           <span className="text-slate-900 ml-2">
-                            ${seoData.salesPrice}
+                            ${(seoData as any).salesPrice}
                           </span>
                         </div>
                         <div>
                           <span className="text-slate-500">Rating:</span>
                           <span className="text-slate-900 ml-2">
-                            {seoData.rating_value}/5
+                            {(seoData as any).rating_value}/5
                           </span>
                         </div>
                         <div>
                           <span className="text-slate-500">Reviews:</span>
                           <span className="text-slate-900 ml-2">
-                            {seoData.rating_count}
+                            {(seoData as any).rating_count}
                           </span>
                         </div>
                       </div>
@@ -381,13 +408,14 @@ export default async function SlugPage({ params }: Props) {
               </div>
 
               <div className="relative">
+                {/* ✅ Updated to show second product image (image2 → image1 → img) */}
                 <Image
-                  src="/placeholder.svg?height=500&width=600"
-                  alt="Modern textile manufacturing facility"
+                  src={overviewImage}
+                  alt={overviewAlt}
                   width={600}
                   height={500}
                   loading="lazy"
-                  className="rounded-2xl shadow-lg"
+                  className="rounded-2xl shadow-lg object-cover w-full h-auto"
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 600px"
                 />
               </div>
@@ -467,45 +495,7 @@ export default async function SlugPage({ params }: Props) {
         {/* ───────────────────────────────────────────────────────────
             CATALOG (anchor used by the hero button)
         ─────────────────────────────────────────────────────────── */}
-        {/* <section id="catalog" className="py-16 bg-slate-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-10">
-              <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-4">
-                Explore Our Fabric Catalog
-              </h2>
-              <p className="text-slate-600">
-                Denim, Twill, Poplin, Jersey, Corduroy and more—curated for B2B buyers.
-              </p>
-            </div>
-
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {["Denim", "Twill", "Poplin", "Jersey", "Corduroy", "Canvas"].map(
-                (name, idx) => (
-                  <div
-                    key={idx}
-                    className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition"
-                  >
-                    <div className="h-40 relative mb-4 rounded-lg overflow-hidden bg-slate-100">
-                      <Image
-                        src={`/placeholder.svg?height=200&width=320&text=${encodeURIComponent(
-                          name
-                        )}`}
-                        alt={`${name} fabric`}
-                        fill
-                        className="object-cover"
-                        sizes="(max-width: 768px) 100vw, 320px"
-                      />
-                    </div>
-                    <div className="font-semibold text-slate-900">{name}</div>
-                    <div className="text-sm text-slate-600">
-                      High quality {name.toLowerCase()} for apparel.
-                    </div>
-                  </div>
-                )
-              )}
-            </div>
-          </div>
-        </section> */}
+        {/* (optional) kept commented out */}
 
         {/* ───────────────────────────────────────────────────────────
             PROCESS
@@ -547,7 +537,6 @@ export default async function SlugPage({ params }: Props) {
             PRODUCT CATEGORIES
         ─────────────────────────────────────────────────────────── */}
         {/* <ProductCategories /> */}
-
         <ProductCategoriesApi />
 
         {/* ───────────────────────────────────────────────────────────

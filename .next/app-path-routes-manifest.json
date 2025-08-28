@@ -1,0 +1,9 @@
+{
+  "/manifest.webmanifest/route": "/manifest.webmanifest",
+  "/robots.txt/route": "/robots.txt",
+  "/sitemap.xml/route": "/sitemap.xml",
+  "/api/contact/route": "/api/contact",
+  "/_not-found/page": "/_not-found",
+  "/[slug]/page": "/[slug]",
+  "/page": "/"
+}

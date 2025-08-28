@@ -1,6 +1,7 @@
 // app/layout.tsx
 import type React from "react";
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import ClientLayout from "./ClientLayout";
 import "./globals.css";
 
@@ -48,11 +49,12 @@ export const metadata: Metadata = {
     charset: "utf-8",
     "content-language": "en",
   },
-  alternates: {
-    canonical: "https://yourdomain.com",
-  },
+  /* alternates: { canonical: "https://yourdomain.com" }, */
   generator: "v0.dev",
 };
+
+const GA_ID = process.env.NEXT_PUBLIC_GA_ID;               // e.g. G-XXXXXXXXXX
+const CLARITY_ID = process.env.NEXT_PUBLIC_CLARITY_ID;     // e.g. abcdef1234
 
 export default function RootLayout({
   children,
@@ -62,6 +64,63 @@ export default function RootLayout({
   return (
     <html lang="en" className="scroll-smooth">
       <body className="font-system antialiased">
+        {/* --- Google Analytics 4 (gtag.js) --- */}
+        {GA_ID ? (
+          <>
+            <Script
+              src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
+              strategy="afterInteractive"
+            />
+            <Script id="ga4-init" strategy="afterInteractive">
+              {`
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('js', new Date());
+                gtag('config', '${GA_ID}', { anonymize_ip: true });
+              `}
+            </Script>
+          </>
+        ) : null}
+
+        {/* --- Microsoft Clarity --- */}
+        {CLARITY_ID ? (
+          <Script id="ms-clarity" strategy="afterInteractive">
+            {`
+              (function(c,l,a,r,i,t,y){
+                  c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+                  t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+                  y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+              })(window, document, "clarity", "script", "${CLARITY_ID}");
+            `}
+          </Script>
+        ) : null}
+
+        {/* --- SPA route-change pageview helper for GA + (optional) Clarity --- */}
+        <Script id="analytics-spa-hook" strategy="afterInteractive">
+          {`
+            (function() {
+              var GA_ID='${GA_ID ?? ""}';
+              function track(url){
+                if (window.gtag && GA_ID) {
+                  window.gtag('config', GA_ID, { page_path: url });
+                }
+                if (window.clarity) {
+                  try { window.clarity('set','page', url); } catch(e){}
+                }
+              }
+              function current(){ return location.pathname + location.search; }
+              var pushState = history.pushState;
+              var replaceState = history.replaceState;
+              function fire(){ track(current()); }
+
+              history.pushState = function() { pushState.apply(this, arguments); fire(); };
+              history.replaceState = function() { replaceState.apply(this, arguments); fire(); };
+              window.addEventListener('popstate', fire);
+              document.addEventListener('DOMContentLoaded', fire);
+            })();
+          `}
+        </Script>
+
         <ClientLayout>{children}</ClientLayout>
       </body>
     </html>

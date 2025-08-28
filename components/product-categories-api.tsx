@@ -141,9 +141,7 @@ export function ProductCategoriesApi() {
     return seos.find((s) => normalizeSlug(s.slug) === slug) || null
   }, [seos, pageSlug])
 
-  // Determine the target Location ID:
-  // - If on a slug page -> use that page's location
-  // - Else ("/") -> default to location.name === "ahmedabad"
+  // Determine the target Location ID
   const targetLocationId = useMemo(() => {
     if (currentSeo) return extractId(currentSeo.location)
 
@@ -186,12 +184,9 @@ export function ProductCategoriesApi() {
   // Current page's product (only if on slug page)
   const currentProductId = useMemo(() => extractId(currentSeo?.product), [currentSeo])
 
-  // Build the list to render:
-  // - If on slug page: related = same-location EXCLUDING current product
-  // - If on "/"      : same-location list (no exclusion)
+  // Build the list to render
   const listToShow = useMemo(() => {
     if (targetLocationProductIds.size === 0) return []
-
     const inLocation = products.filter((p) => targetLocationProductIds.has(p._id.trim()))
     if (currentSeo && currentProductId) {
       return inLocation.filter((p) => p._id.trim() !== currentProductId)
@@ -252,8 +247,28 @@ export function ProductCategoriesApi() {
                       const targetSlug = productSlugById.get(p._id)
                       const disabled = !targetSlug
 
+                      // Handlers to make the WHOLE CARD clickable & keyboard accessible
+                      const handleClick = () => {
+                        if (!disabled) goToProduct(p._id)
+                      }
+                      const handleKeyDown = (e: React.KeyboardEvent<HTMLElement>) => {
+                        if (!disabled && (e.key === "Enter" || e.key === " ")) {
+                          e.preventDefault()
+                          goToProduct(p._id)
+                        }
+                      }
+
                       return (
-                        <article key={p._id} className="group cursor-pointer">
+                        <article
+                          key={p._id}
+                          className={`group ${disabled ? "cursor-not-allowed" : "cursor-pointer"}`}
+                          onClick={handleClick}
+                          onKeyDown={handleKeyDown}
+                          role="button"
+                          tabIndex={disabled ? -1 : 0}
+                          aria-disabled={disabled}
+                          title={disabled ? "No details available" : `View details for ${p.name}`}
+                        >
                           <div className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden border border-slate-100 hover:border-blue-200">
                             <div className="relative overflow-hidden">
                               <Image
@@ -276,9 +291,13 @@ export function ProductCategoriesApi() {
                                 {p.productdescription || "—"}
                               </p>
 
+                              {/* Keep the button for explicit affordance; card click also works */}
                               <button
                                 type="button"
-                                onClick={() => !disabled && goToProduct(p._id)}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  if (!disabled) goToProduct(p._id)
+                                }}
                                 disabled={disabled}
                                 className={`mt-6 w-full py-3 px-4 rounded-lg font-medium transition-all duration-200 border ${
                                   disabled

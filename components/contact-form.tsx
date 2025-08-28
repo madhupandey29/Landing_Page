@@ -1,17 +1,59 @@
-"use client"
+"use client";
 
-import type React from "react"
-
-import { useState, useEffect, useCallback } from "react"
+import type React from "react";
+import { useState, useEffect, useCallback } from "react";
 
 interface ContactFormProps {
-  onSuccess?: () => void
+  onSuccess?: () => void;
+
+  /** Optional server actions injected from page.tsx */
+  submitAction?: (fd: FormData) => Promise<any>;
+  saveDraftAction?: (fd: FormData) => Promise<any>;
+
+  /** Client-side fallback target + headers (now supported) */
+  submitUrl?: string;
+  submitHeaders?: Record<string, string>;
+
+  draftKey?: string; // e.g. "contact_draft_id"
 }
 
-const STORAGE_KEY = "fabricpro_contact_form"
+const STORAGE_KEY = "fabricpro_contact_form";
 
-export function ContactForm({ onSuccess }: ContactFormProps = {}) {
-  const [currentStep, setCurrentStep] = useState(1)
+// Build env-based defaults (used only if props aren’t provided)
+const RAW_BASE =
+  (process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:7000/landing")
+    .replace(/\/+$/, "");
+const DEFAULT_CONTACT_URL = `${RAW_BASE}/contacts`;
+
+const API_KEY_HEADER =
+  process.env.NEXT_PUBLIC_API_KEY_HEADER || "x-api-key";
+const ADMIN_EMAIL_HEADER =
+  process.env.NEXT_PUBLIC_ADMIN_EMAIL_HEADER || "x-admin-email";
+const API_KEY = process.env.NEXT_PUBLIC_API_KEY || "";
+// IMPORTANT: this must match backend Role_Management_Key_Value
+const ADMIN_EMAIL =
+  process.env.NEXT_PUBLIC_ADMIN_EMAIL ||
+  "";
+
+/** Merge provided submitHeaders with env defaults */
+function buildAuthHeaders(extra?: Record<string, string>) {
+  const h: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (API_KEY) h[API_KEY_HEADER] = API_KEY;
+  if (ADMIN_EMAIL) h[ADMIN_EMAIL_HEADER] = ADMIN_EMAIL;
+  return { ...h, ...(extra || {}) };
+}
+
+export function ContactForm({
+  onSuccess,
+  submitAction,
+  saveDraftAction,
+  submitUrl = DEFAULT_CONTACT_URL,
+  submitHeaders,
+  draftKey = "contact_draft_id",
+}: ContactFormProps = {}) {
+  const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     companyName: "",
     contactPerson: "",
@@ -24,105 +66,185 @@ export function ContactForm({ onSuccess }: ContactFormProps = {}) {
     specifications: "",
     timeline: "",
     message: "",
-  })
-  const [isLoading, setIsLoading] = useState(true)
-  const [lastSaved, setLastSaved] = useState<Date | null>(null)
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [showSuccess, setShowSuccess] = useState(false)
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
-  // Load saved form data
+  /** backend draft id we create on step-1 save and reuse later */
+  const [draftId, setDraftId] = useState<string>("");
+
+  // Load saved form data + draft id
   useEffect(() => {
     const loadSavedData = () => {
       try {
-        const savedData = localStorage.getItem(STORAGE_KEY)
+        const savedData = localStorage.getItem(STORAGE_KEY);
         if (savedData) {
-          const parsed = JSON.parse(savedData)
-          // ✅ functional update avoids depending on `formData`
-          setFormData(prev => parsed.formData ?? prev)
-          setCurrentStep(parsed.currentStep || 1)
-          setLastSaved(parsed.lastSaved ? new Date(parsed.lastSaved) : null)
+          const parsed = JSON.parse(savedData);
+          setFormData((prev) => parsed.formData ?? prev);
+          setCurrentStep(parsed.currentStep || 1);
+          setLastSaved(parsed.lastSaved ? new Date(parsed.lastSaved) : null);
         }
+        const savedDraft = localStorage.getItem(draftKey) || "";
+        if (savedDraft) setDraftId(savedDraft);
       } catch (error) {
-        console.error("Error loading saved form data:", error)
+        console.error("Error loading saved form data:", error);
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
-    }
+    };
 
-    loadSavedData()
-  }, [])
+    loadSavedData();
+  }, [draftKey]);
 
-  // Auto-save function
+  // Auto-save to localStorage (UI only)
   const saveFormData = useCallback(() => {
     try {
       const dataToSave = {
         formData,
         currentStep,
         lastSaved: new Date().toISOString(),
-      }
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave))
-      setLastSaved(new Date())
-      setHasUnsavedChanges(false)
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+      setLastSaved(new Date());
+      setHasUnsavedChanges(false);
     } catch (error) {
-      console.error("Error saving form data:", error)
+      console.error("Error saving form data:", error);
     }
-  }, [formData, currentStep])
+  }, [formData, currentStep]);
 
-  // Auto-save effect
   useEffect(() => {
-    if (isLoading) return
-
-    setHasUnsavedChanges(true)
+    if (isLoading) return;
+    setHasUnsavedChanges(true);
     const timeoutId = setTimeout(() => {
-      saveFormData()
-    }, 1000)
+      saveFormData();
+    }, 1000);
+    return () => clearTimeout(timeoutId);
+  }, [formData, currentStep, saveFormData, isLoading]);
 
-    return () => clearTimeout(timeoutId)
-  }, [formData, currentStep, saveFormData, isLoading])
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
-  }
+  const handleInputChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
 
   const handleCheckboxChange = (fabricType: string) => {
     setFormData((prev) => ({
       ...prev,
       fabricTypes: prev.fabricTypes.includes(fabricType)
-        ? prev.fabricTypes.filter((type) => type !== fabricType)
+        ? prev.fabricTypes.filter((t) => t !== fabricType)
         : [...prev.fabricTypes, fabricType],
-    }))
+    }));
+  };
+
+  /** Map UI -> backend schema keys (names stay the same in the UI) */
+  function toBackendPayload(status: "draft" | "submitted", stepCompleted: number) {
+    return {
+      companyName: formData.companyName,
+      contactPerson: formData.contactPerson,
+      email: formData.email,
+      phoneNumber: formData.phone, // map
+      businessType: formData.businessType,
+      annualFabricVolume: formData.annualVolume, // map
+      primaryMarkets: formData.primaryMarkets,
+      fabricTypesOfInterest: formData.fabricTypes, // map (array)
+      specificationsRequirements: formData.specifications, // map
+      timeline: formData.timeline,
+      additionalMessage: formData.message, // map
+      status,
+      stepCompleted,
+      draftId, // benign on backend; will be ignored by schema
+    };
   }
 
-  const nextStep = () => setCurrentStep((prev) => Math.min(prev + 1, 3))
-  const prevStep = () => setCurrentStep((prev) => Math.max(prev - 1, 1))
+  /** Save partial data to backend when moving steps (if you wired a server action) */
+  const doSaveDraft = async (nextStepCompleted: number) => {
+    if (!saveDraftAction) return; // not wired -> no network draft save
+    const payload = toBackendPayload("draft", nextStepCompleted);
+    const fd = new FormData();
+    Object.entries(payload).forEach(([k, v]) => {
+      if (Array.isArray(v)) v.forEach((x) => fd.append(k, String(x)));
+      else if (v !== undefined && v !== null) fd.set(k, String(v));
+    });
+    const res = await saveDraftAction(fd);
+    if (res?.ok && res?.id && !draftId) {
+      setDraftId(res.id);
+      localStorage.setItem(draftKey, res.id);
+    }
+  };
+
+  const nextStep = async () => {
+    const next = Math.min(currentStep + 1, 3);
+    await doSaveDraft(Math.max(currentStep, next));
+    setCurrentStep(next);
+  };
+
+  const prevStep = async () => {
+    const prev = Math.max(currentStep - 1, 1);
+    await doSaveDraft(Math.max(currentStep, prev));
+    setCurrentStep(prev);
+  };
+
+  /** ---- NEW: client-side fallback POST if server action is missing/fails ---- */
+  async function postDirectToBackend(payload: any) {
+    const res = await fetch(submitUrl || DEFAULT_CONTACT_URL, {
+      method: "POST",
+      headers: buildAuthHeaders(submitHeaders),
+      body: JSON.stringify(payload),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(json?.message || `Backend error ${res.status}`);
+    }
+    return json;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSubmitting(true)
+    e.preventDefault();
+    if (currentStep !== 3) return; // only final step submits
 
+    setIsSubmitting(true);
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+      const payload = toBackendPayload("submitted", 3);
 
-      console.log("Form submitted:", formData)
+      // 1) Try server action if provided
+      if (submitAction) {
+        const fd = new FormData();
+        Object.entries(payload).forEach(([k, v]) => {
+          if (Array.isArray(v)) v.forEach((x) => fd.append(k, String(x)));
+          else if (v !== undefined && v !== null) fd.set(k, String(v));
+        });
+        const res = await submitAction(fd);
+        if (!res?.ok) {
+          // If server action complains (or you run locally without it), fallback to direct POST
+          await postDirectToBackend(payload);
+        }
+      } else {
+        // 2) No server action — use direct POST
+        await postDirectToBackend(payload);
+      }
 
-      // Clear saved data
-      localStorage.removeItem(STORAGE_KEY)
-      setShowSuccess(true)
+      // Clear local progress and draft id
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(draftKey);
+      setShowSuccess(true);
 
       setTimeout(() => {
-        setShowSuccess(false)
-        onSuccess?.()
-      }, 3000)
+        setShowSuccess(false);
+        onSuccess?.();
+      }, 3000);
     } catch (error) {
-      console.error("Error submitting form:", error)
-      alert("There was an error submitting your form. Please try again.")
+      console.error("Error submitting form:", error);
+      alert("There was an error submitting your form. Please try again.");
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   if (isLoading) {
     return (
@@ -132,7 +254,7 @@ export function ContactForm({ onSuccess }: ContactFormProps = {}) {
           <span className="ml-3 text-slate-600">Loading form...</span>
         </div>
       </div>
-    )
+    );
   }
 
   if (showSuccess) {
@@ -145,12 +267,13 @@ export function ContactForm({ onSuccess }: ContactFormProps = {}) {
             </svg>
           </div>
           <h3 className="text-2xl font-bold text-slate-900 mb-2">Quote Request Submitted!</h3>
-          <p className="text-slate-600">Thank you! We&rsquo;ll get back to you within 24 hours.</p>
+          <p className="text-slate-600">Thank you! We’ll get back to you within 24 hours.</p>
         </div>
       </div>
-    )
+    );
   }
 
+  /* ---------- UI unchanged below ---------- */
   return (
     <div className="bg-white rounded-2xl shadow-xl p-8">
       {/* Auto-save indicator */}
@@ -187,9 +310,7 @@ export function ContactForm({ onSuccess }: ContactFormProps = {}) {
                 {step}
               </div>
               {step < 3 && (
-                <div
-                  className={`w-16 h-1 mx-2 transition-colors ${currentStep > step ? "bg-blue-600" : "bg-slate-200"}`}
-                ></div>
+                <div className={`w-16 h-1 mx-2 transition-colors ${currentStep > step ? "bg-blue-600" : "bg-slate-200"}`} />
               )}
             </div>
           ))}
@@ -410,5 +531,5 @@ export function ContactForm({ onSuccess }: ContactFormProps = {}) {
         </div>
       </form>
     </div>
-  )
+  );
 }
