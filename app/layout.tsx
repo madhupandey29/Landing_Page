@@ -12,7 +12,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title:
+/*   title:
     "Premium B2B Fabric Supplier | Global Textile Manufacturing Solutions - FabricPro",
   description:
     "Leading B2B fabric supplier for global garment manufacturers, clothing retailers, and fabric importers. Premium quality textiles, competitive pricing, worldwide shipping.",
@@ -26,14 +26,14 @@ export const metadata: Metadata = {
     type: "website",
     siteName: "FabricPro",
     locale: "en_US",
-  },
-  twitter: {
+  }, */
+/*   twitter: {
     card: "summary_large_image",
     title:
       "Premium B2B Fabric Supplier | Global Textile Manufacturing Solutions",
     description:
       "Leading B2B fabric supplier for global garment manufacturers, clothing retailers, and fabric importers.",
-  },
+  }, */
   robots: {
     index: true,
     follow: true,

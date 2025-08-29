@@ -265,8 +265,8 @@ export async function generateMetadata(): Promise<Metadata> {
   const twitterCard = coerceTwitterCard(seoData.twitterCard);
 
   return {
-    title: seoData.title || "FabricPro",
-    description: seoData.description || "Premium fabrics",
+    title: seoData.title,
+    description: seoData.description,
     keywords: seoData.keywords,
     openGraph: {
       title: seoData.ogTitle,
@@ -278,7 +278,7 @@ export async function generateMetadata(): Promise<Metadata> {
       images: seoData.openGraph?.images,
     } as any,
     twitter: {
-      card: twitterCard,
+      card: seoData.twitter.twitterCard,
       title: seoData.twitterTitle,
       description: seoData.twitterDescription,
     },
