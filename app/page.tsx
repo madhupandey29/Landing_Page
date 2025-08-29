@@ -31,7 +31,7 @@ const CONTACT_URL =
 -------------------------------------------------- */
 const API_KEY = process.env.NEXT_PUBLIC_API_KEY ?? "";
 const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? "";
-const API_KEY_HEADER = process.env.NEXT_PUBLIC_API_KEY_HEADER ?? "x-api-key";
+const API_KEY_HEADER = process.env.NEXT_PUBLIC_API_KEY_HEADER ?? "x-api-key-yash";
 const ADMIN_EMAIL_HEADER = process.env.NEXT_PUBLIC_ADMIN_EMAIL_HEADER ?? "x-admin-email";
 
 const authHeaders: Record<string, string> = {};
@@ -654,8 +654,8 @@ export default async function Page() {
               submitAction={submitContact}
               saveDraftAction={saveContactDraft}
               // these two props can be read by your client form if needed:
-              submitUrl={CONTACT_URL}
-              submitHeaders={authHeaders}
+              submitUrl={undefined}
+              submitHeaders={undefined}
             />
             <div className="space-y-6 text-white">
               <div>📞 +91 9925155141</div>

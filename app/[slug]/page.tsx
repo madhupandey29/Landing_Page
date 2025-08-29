@@ -70,9 +70,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         : "website";
 
       const twitterCard = (validTwitterCards as readonly string[]).includes(
-        seoData.twitterCard as any
+        seoData.twitter.twitterCard as any
       )
-        ? (seoData.twitterCard as (typeof validTwitterCards)[number])
+        ? (seoData.twitter.twitterCard as (typeof validTwitterCards)[number])
         : "summary_large_image";
 
       return {

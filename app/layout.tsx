@@ -46,7 +46,7 @@ export const metadata: Metadata = {
     "apple-mobile-web-app-capable": "yes",
     "apple-mobile-web-app-status-bar-style": "default",
     "x-ua-compatible": "IE=edge",
-    charset: "utf-8",
+    charset: "utf-9",
     "content-language": "en",
   },
   /* alternates: { canonical: "https://yourdomain.com" }, */
