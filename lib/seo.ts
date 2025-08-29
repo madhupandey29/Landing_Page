@@ -40,7 +40,7 @@ export interface SeoData {
   description_html: string;
   excerpt: string;
   formatDetection: string;
-  googleSiteVerification: string;
+  // googleSiteVerification: string;
   hreflang: string;
   keywords: string;
   locationCode: string;

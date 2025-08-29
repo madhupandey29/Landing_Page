@@ -38,9 +38,9 @@ export const metadata: Metadata = {
     index: true,
     follow: true,
   },
-  verification: {
-    google: "your-google-verification-code",
-  },
+  // verification: {
+  //   google: "your-google-verification-code",
+  // },
   other: {
     "format-detection": "telephone=no",
     "apple-mobile-web-app-capable": "yes",
@@ -63,20 +63,19 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="scroll-smooth">
-      <body className="font-system antialiased">
-        {/* --- Google Analytics 4 (gtag.js) --- */}
-        {GA_ID ? (
+      <head> 
+         {GA_ID ? (
           <>
            
             <meta name="google-site-verification" content={GA_ID} />
-            <Script id="ga4-init" strategy="afterInteractive">
+            {/* <Script id="ga4-init" strategy="afterInteractive">
               {`
                 window.dataLayer = window.dataLayer || [];
                 function gtag(){dataLayer.push(arguments);}
                 gtag('js', new Date());
                 gtag('config', '${GA_ID}', { anonymize_ip: true });
               `}
-            </Script>
+            </Script> */}
           </>
         ) : null}
 
@@ -118,6 +117,10 @@ export default function RootLayout({
             })();
           `}
         </Script>
+      </head>
+      <body className="font-system antialiased">
+        {/* --- Google Analytics 4 (gtag.js) --- */}
+       
 
         <ClientLayout>{children}</ClientLayout>
       </body>

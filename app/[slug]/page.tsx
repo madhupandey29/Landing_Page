@@ -95,9 +95,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
           title: seoData.twitterTitle,
           description: seoData.twitterDescription,
         },
-        verification: {
-          google: seoData.googleSiteVerification,
-        },
+        // verification: {
+        //   google: seoData.googleSiteVerification,
+        // },
         other: {
           "format-detection": seoData.formatDetection,
           "apple-mobile-web-app-capable": seoData.mobileWebAppCapable,
@@ -149,7 +149,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         charset: "utf-8",
         "content-language": "en",
         /*  canonical: "https://yourdomain.com", */
-        "google-site-verification": "your-google-verification-code",
+        // "google-site-verification": "your-google-verification-code",
       },
     };
   } catch {
