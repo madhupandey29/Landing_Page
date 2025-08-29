@@ -67,10 +67,8 @@ export default function RootLayout({
         {/* --- Google Analytics 4 (gtag.js) --- */}
         {GA_ID ? (
           <>
-            <Script
-              src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
-              strategy="afterInteractive"
-            />
+           
+            <meta name="google-site-verification" content={GA_ID} />
             <Script id="ga4-init" strategy="afterInteractive">
               {`
                 window.dataLayer = window.dataLayer || [];
