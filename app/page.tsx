@@ -245,24 +245,29 @@ export async function generateMetadata(): Promise<Metadata> {
     ? locJson.data.locations
     : [];
 
+  // default location: "ahmedabad"
   const defaultLoc =
-    locs.find((l) => String(l?.name ?? "").toLowerCase() === "ahmedabad") ||
-    null;
+    locs.find((l) => String(l?.name ?? "").toLowerCase() === "ahmedabad") || null;
   const defaultLocId = defaultLoc?._id ?? "";
 
+  // pick SEO row for that location (or first available)
   const seoData =
     seos.find((s) => toId(s.location) === defaultLocId) || seos[0] || null;
 
-  if (!seoData) {
-    return {
-      title: "Premium B2B Fabric Supplier | FabricPro",
-      description:
-        "Leading B2B fabric supplier for global garment manufacturers and retailers.",
-    };
-  }
+  if (!seoData) return {};
 
-  const ogType = coerceOgType(seoData.ogType);
-  const twitterCard = coerceTwitterCard(seoData.twitterCard);
+  // coerce card to valid union if possible, otherwise leave undefined
+  const twRaw = String(seoData.twitterCard ?? "").trim().toLowerCase();
+  const twitterCard =
+    twRaw === "summary" ||
+    twRaw === "summary_large_image" ||
+    twRaw === "player" ||
+    twRaw === "app"
+      ? (twRaw as "summary" | "summary_large_image" | "player" | "app")
+      : undefined;
+
+  const ogImages = seoData.ogImage ? [seoData.ogImage] : undefined;
+  const twitterImages = seoData.twitterImage ? [seoData.twitterImage] : undefined;
 
   return {
     title: seoData.title,
@@ -273,14 +278,17 @@ export async function generateMetadata(): Promise<Metadata> {
       description: seoData.ogDescription,
       siteName: seoData.ogSiteName,
       locale: seoData.ogLocale,
-      type: ogType,
+      type: (String(seoData.ogType ?? "").trim() || "website") as any,
       url: seoData.ogUrl,
-      images: seoData.openGraph?.images,
+      images: ogImages,
     } as any,
     twitter: {
-      card: seoData.twitter.twitterCard,
+      card: twitterCard,
+      // EXACTLY from DB — no fallbacks or transformations
       title: seoData.twitterTitle,
       description: seoData.twitterDescription,
+      site: seoData.twitterSite,
+      images: twitterImages,
     },
     alternates: { canonical: seoData.canonical_url },
   };
@@ -356,7 +364,7 @@ export default async function Page() {
     firstCard?.img,
     firstCard?.image1,
     firstCard?.image2,
-    "/placeholder.svg?height=600&width=800"
+    /* "/placeholder.svg?height=600&width=800" */
   );
   const heroName = (firstCard?.name || "Fabrics").toString();
   const heroAlt = heroName;
@@ -366,11 +374,11 @@ export default async function Page() {
     firstCard?.image2,
     firstCard?.image1,
     firstCard?.img,
-    "/placeholder.svg?height=500&width=600"
+   /*  "/placeholder.svg?height=500&width=600" */
   );
   const overviewAlt = firstCard?.name
     ? `${firstCard.name} — secondary view`
-    : "Modern textile manufacturing facility";
+    : "";
 
   // Allow passing custom props without touching ContactForm's types
   const AnyContactForm = ContactForm as any;
